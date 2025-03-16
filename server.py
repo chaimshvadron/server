@@ -13,36 +13,42 @@ app = Flask(__name__)
 
 URL = "https://aoklivestrim.com/wp-json/purim/v1/display"
 
-# **הגדרת נתיבים ל-Chromium ול-Chromedriver**
+# **הגדרת נתיבים ל-Chromium ול-ChromeDriver**
 CHROMIUM_PATH = "/tmp/chrome-linux/chrome"
 CHROMEDRIVER_PATH = "/tmp/chromedriver"
 
 def install_chromium():
-    """מוריד ומגדיר את Chromium ו-ChromeDriver בסביבת Render"""
+    """מוריד ומתקין את Chromium ו-ChromeDriver בסביבה עם מגבלות זיכרון"""
     logging.info("Downloading and setting up Chromium...")
 
     try:
-        # ✅ הורדת Chromium
-        chromium_url = "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+        # ✅ ניקוי קבצים ישנים
+        subprocess.run(["rm", "-rf", "/tmp/chrome-linux", "/tmp/chrome.zip", "/tmp/chromedriver.zip"], check=False)
+
+        # ✅ הורדת Chromium לגרסה קטנה יותר שמתאימה לשרתים מוגבלי זיכרון
+        chromium_url = "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_122.0.6261.112-1_amd64.deb"
         chromium_path = "/tmp/chrome.deb"
         
         subprocess.run(["curl", "-Lo", chromium_path, chromium_url], check=True)
-        if not os.path.exists(chromium_path) or os.stat(chromium_path).st_size == 0:
-            raise Exception("Chromium download failed!")
+        
+        if not os.path.exists(chromium_path) or os.stat(chromium_path).st_size < 10_000_000:
+            raise Exception("Chromium download failed or file is too small!")
 
-        # ✅ התקנת Chromium באמצעות dpkg
+        # ✅ פריסת Chromium באופן ידני
         subprocess.run(["dpkg", "-x", chromium_path, "/tmp/chrome-linux"], check=True)
-        os.chmod(CHROMIUM_PATH, 0o755)
 
+        # ✅ עדכון ההרשאות של Chromium
+        os.chmod(CHROMIUM_PATH, 0o755)
         logging.info("Chromium installed successfully.")
 
-        # ✅ הורדת ChromeDriver
-        chromedriver_url = "https://chromedriver.storage.googleapis.com/122.0.6261.112/chromedriver_linux64.zip"
+        # ✅ הורדת ChromeDriver תואם
+        chromedriver_url = "https://chromedriver.storage.googleapis.com/122.0.6261.112/chromedriver-linux64.zip"
         chromedriver_zip = "/tmp/chromedriver.zip"
 
         subprocess.run(["curl", "-Lo", chromedriver_zip, chromedriver_url], check=True)
-        if not os.path.exists(chromedriver_zip) or os.stat(chromedriver_zip).st_size == 0:
-            raise Exception("ChromeDriver download failed!")
+        
+        if not os.path.exists(chromedriver_zip) or os.stat(chromedriver_zip).st_size < 1_000_000:
+            raise Exception("ChromeDriver download failed or file is too small!")
 
         # ✅ חילוץ ChromeDriver
         subprocess.run(["unzip", chromedriver_zip, "-d", "/tmp"], check=True)
@@ -56,7 +62,7 @@ def install_chromium():
         raise e
 
 def get_data_using_selenium():
-    """שולף נתונים מהקישור באמצעות דפדפן אמיתי (Selenium)"""
+    """שולף נתונים מהקישור באמצעות Selenium"""
     logging.info("Launching Chromium browser...")
 
     chrome_options = Options()
@@ -65,7 +71,7 @@ def get_data_using_selenium():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--window-size=1280x720")
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
 
     service = Service(CHROMEDRIVER_PATH)
