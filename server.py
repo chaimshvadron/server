@@ -1,6 +1,5 @@
 import os
 import logging
-import requests
 import subprocess
 from flask import Flask, jsonify
 from selenium import webdriver
@@ -23,25 +22,34 @@ def install_chromium():
     logging.info("Downloading and setting up Chromium...")
 
     try:
-        subprocess.run([
-            "bash", "-c",
-            "mkdir -p /tmp/chrome-linux && "
-            "curl -Lo /tmp/chrome-linux/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chrome-linux64.zip && "
-            "unzip /tmp/chrome-linux/chrome.zip -d /tmp/chrome-linux && "
-            "chmod +x /tmp/chrome-linux/chrome-linux64/chrome && "
-            "mv /tmp/chrome-linux/chrome-linux64/chrome /tmp/chrome-linux/chrome"
-        ], check=True)
+        # ✅ הורדת Chromium
+        chromium_url = "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+        chromium_path = "/tmp/chrome.deb"
+        
+        subprocess.run(["curl", "-Lo", chromium_path, chromium_url], check=True)
+        if not os.path.exists(chromium_path) or os.stat(chromium_path).st_size == 0:
+            raise Exception("Chromium download failed!")
 
-        logging.info("Downloading and setting up ChromeDriver...")
-        subprocess.run([
-            "bash", "-c",
-            "curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chromedriver-linux64.zip && "
-            "unzip /tmp/chromedriver.zip -d /tmp && "
-            "chmod +x /tmp/chromedriver-linux64/chromedriver && "
-            "mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver"
-        ], check=True)
+        # ✅ התקנת Chromium באמצעות dpkg
+        subprocess.run(["dpkg", "-x", chromium_path, "/tmp/chrome-linux"], check=True)
+        os.chmod(CHROMIUM_PATH, 0o755)
 
-        logging.info("Chromium and ChromeDriver setup completed successfully!")
+        logging.info("Chromium installed successfully.")
+
+        # ✅ הורדת ChromeDriver
+        chromedriver_url = "https://chromedriver.storage.googleapis.com/122.0.6261.112/chromedriver_linux64.zip"
+        chromedriver_zip = "/tmp/chromedriver.zip"
+
+        subprocess.run(["curl", "-Lo", chromedriver_zip, chromedriver_url], check=True)
+        if not os.path.exists(chromedriver_zip) or os.stat(chromedriver_zip).st_size == 0:
+            raise Exception("ChromeDriver download failed!")
+
+        # ✅ חילוץ ChromeDriver
+        subprocess.run(["unzip", chromedriver_zip, "-d", "/tmp"], check=True)
+        subprocess.run(["mv", "/tmp/chromedriver", CHROMEDRIVER_PATH], check=True)
+        os.chmod(CHROMEDRIVER_PATH, 0o755)
+
+        logging.info("ChromeDriver installed successfully.")
 
     except subprocess.CalledProcessError as e:
         logging.error(f"Error installing Chromium/ChromeDriver: {e}")
@@ -53,9 +61,9 @@ def get_data_using_selenium():
 
     chrome_options = Options()
     chrome_options.binary_location = CHROMIUM_PATH
-    chrome_options.add_argument("--headless")  # **הרצת דפדפן ללא ממשק גרפי**
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")  # **קריטי ל-Render**
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
@@ -66,10 +74,8 @@ def get_data_using_selenium():
     logging.info(f"Navigating to {URL}...")
     driver.get(URL)
 
-    # המתנה לטעינת העמוד
     driver.implicitly_wait(10)
 
-    # קבלת תוכן העמוד
     page_source = driver.page_source
     driver.quit()
 
