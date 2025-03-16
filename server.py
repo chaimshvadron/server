@@ -15,28 +15,32 @@ app = Flask(__name__)
 
 URL = "https://aoklivestrim.com/wp-json/purim/v1/display"
 
-# **התקנת Chrome באופן אוטומטי אם הוא לא קיים**
-def install_chrome():
-    if not os.path.exists("/usr/bin/google-chrome"):
-        logging.info("Installing Chrome...")
+# **הורדת Chromium והגדרת נתיב**
+CHROMIUM_PATH = "/tmp/chrome-linux/chrome"
+
+def install_chromium():
+    """הורדת Chromium לשרת Render אם הוא לא קיים"""
+    if not os.path.exists(CHROMIUM_PATH):
+        logging.info("Downloading Chromium...")
         subprocess.run([
             "bash", "-c",
-            "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - && "
-            "sudo sh -c 'echo \"deb http://dl.google.com/linux/chrome/deb/ stable main\" >> /etc/apt/sources.list.d/google-chrome.list' && "
-            "sudo apt update && sudo apt install -y google-chrome-stable"
+            "mkdir -p /tmp/chrome-linux && "
+            "curl -Lo /tmp/chrome-linux/chrome.zip https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && "
+            "unzip /tmp/chrome-linux/chrome.zip -d /tmp/chrome-linux && "
+            "chmod +x /tmp/chrome-linux/chrome"
         ], check=True)
-        logging.info("Chrome installed successfully.")
+        logging.info("Chromium installed successfully.")
     else:
-        logging.info("Chrome is already installed.")
+        logging.info("Chromium is already installed.")
 
-install_chrome()  # **הרצת ההתקנה לפני שהשרת מתחיל לפעול**
+install_chromium()  # **מריץ את ההתקנה לפני שהשרת מתחיל לפעול**
 
 def get_data_using_selenium():
     """שולף נתונים מהקישור באמצעות דפדפן אמיתי (Selenium)"""
-    logging.info("Launching Chrome browser...")
+    logging.info("Launching Chromium browser...")
 
     chrome_options = Options()
-    chrome_options.binary_location = "/usr/bin/google-chrome"  # **הגדרת הנתיב ל-Chrome**
+    chrome_options.binary_location = CHROMIUM_PATH  # **הגדרת הנתיב ל-Chromium**
     chrome_options.add_argument("--headless")  # הרצת הדפדפן ללא ממשק גרפי
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920x1080")
