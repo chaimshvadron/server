@@ -15,23 +15,34 @@ app = Flask(__name__)
 
 URL = "https://aoklivestrim.com/wp-json/purim/v1/display"
 
-# **הורדת Chromium והגדרת נתיב**
+# **הגדרת נתיב Chromium**
 CHROMIUM_PATH = "/tmp/chrome-linux/chrome"
+CHROMEDRIVER_PATH = "/tmp/chromedriver"
 
 def install_chromium():
-    """הורדת Chromium לשרת Render אם הוא לא קיים"""
+    """הורדת Chromium ו-ChromeDriver לשרת Render"""
     if not os.path.exists(CHROMIUM_PATH):
         logging.info("Downloading Chromium...")
         subprocess.run([
             "bash", "-c",
             "mkdir -p /tmp/chrome-linux && "
-            "curl -Lo /tmp/chrome-linux/chrome.zip https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && "
+            "curl -Lo /tmp/chrome-linux/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chrome-linux64.zip && "
             "unzip /tmp/chrome-linux/chrome.zip -d /tmp/chrome-linux && "
-            "chmod +x /tmp/chrome-linux/chrome"
+            "chmod +x /tmp/chrome-linux/chrome-linux64/chrome && "
+            "mv /tmp/chrome-linux/chrome-linux64/chrome /tmp/chrome-linux/chrome"
         ], check=True)
         logging.info("Chromium installed successfully.")
-    else:
-        logging.info("Chromium is already installed.")
+
+    if not os.path.exists(CHROMEDRIVER_PATH):
+        logging.info("Downloading ChromeDriver...")
+        subprocess.run([
+            "bash", "-c",
+            "curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chromedriver-linux64.zip && "
+            "unzip /tmp/chromedriver.zip -d /tmp/ && "
+            "chmod +x /tmp/chromedriver-linux64/chromedriver && "
+            "mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver"
+        ], check=True)
+        logging.info("ChromeDriver installed successfully.")
 
 install_chromium()  # **מריץ את ההתקנה לפני שהשרת מתחיל לפעול**
 
@@ -48,7 +59,7 @@ def get_data_using_selenium():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-    service = Service(ChromeDriverManager().install())
+    service = Service(CHROMEDRIVER_PATH)  # **משתמש ב-ChromeDriver**
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     logging.info(f"Navigating to {URL}...")
