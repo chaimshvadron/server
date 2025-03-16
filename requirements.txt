@@ -1,3 +1,4 @@
 flask
-cloudscraper
+selenium
+webdriver-manager
 gunicorn
