@@ -16,35 +16,21 @@ app = Flask(__name__)
 URL = "https://aoklivestrim.com/wp-json/purim/v1/display"
 
 # **הגדרת נתיב Chromium**
-CHROMIUM_PATH = "/tmp/chrome-linux/chrome"
-CHROMEDRIVER_PATH = "/tmp/chromedriver"
+CHROMIUM_PATH = "/usr/bin/chromium-browser"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 
 def install_chromium():
-    """הורדת Chromium ו-ChromeDriver לשרת Render"""
-    if not os.path.exists(CHROMIUM_PATH):
-        logging.info("Downloading Chromium...")
-        subprocess.run([
-            "bash", "-c",
-            "mkdir -p /tmp/chrome-linux && "
-            "curl -Lo /tmp/chrome-linux/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chrome-linux64.zip && "
-            "unzip /tmp/chrome-linux/chrome.zip -d /tmp/chrome-linux && "
-            "chmod +x /tmp/chrome-linux/chrome-linux64/chrome && "
-            "mv /tmp/chrome-linux/chrome-linux64/chrome /tmp/chrome-linux/chrome"
-        ], check=True)
-        logging.info("Chromium installed successfully.")
+    """התקנת Chromium מ-APT במקום curl"""
+    logging.info("Installing Chromium using apt-get...")
+    subprocess.run([
+        "bash", "-c",
+        "apt-get update && "
+        "apt-get install -y chromium-browser chromium-chromedriver && "
+        "ln -s /usr/bin/chromium /usr/bin/chromium-browser"
+    ], check=True)
+    logging.info("Chromium and ChromeDriver installed successfully.")
 
-    if not os.path.exists(CHROMEDRIVER_PATH):
-        logging.info("Downloading ChromeDriver...")
-        subprocess.run([
-            "bash", "-c",
-            "curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.112/linux64/chromedriver-linux64.zip && "
-            "unzip /tmp/chromedriver.zip -d /tmp/ && "
-            "chmod +x /tmp/chromedriver-linux64/chromedriver && "
-            "mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver"
-        ], check=True)
-        logging.info("ChromeDriver installed successfully.")
-
-install_chromium()  # **מריץ את ההתקנה לפני שהשרת מתחיל לפעול**
+install_chromium()  # **מתקין Chromium לפני שהשרת מתחיל לפעול**
 
 def get_data_using_selenium():
     """שולף נתונים מהקישור באמצעות דפדפן אמיתי (Selenium)"""
