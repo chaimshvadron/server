@@ -1,5 +1,8 @@
 from flask import Flask, jsonify
-import cloudscraper
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import logging
 import time
 
@@ -10,53 +13,43 @@ app = Flask(__name__)
 
 URL = "https://aoklivestrim.com/wp-json/purim/v1/display"
 
+def get_data_using_selenium():
+    """שולף נתונים מהקישור באמצעות דפדפן אמיתי (Selenium)"""
+    logging.info("Launching Chrome browser...")
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # הפעלת דפדפן ללא ממשק גרפי
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    logging.info(f"Navigating to {URL}...")
+    driver.get(URL)
+
+    # המתנה לטעינת העמוד
+    time.sleep(5)
+
+    # קבלת תוכן העמוד
+    page_source = driver.page_source
+    driver.quit()
+
+    return page_source
+
 @app.route('/')
 def home():
     return "Proxy Server is Running"
 
 @app.route('/proxy', methods=['GET'])
 def proxy():
-    logging.info(f"Fetching data from URL: {URL}")
-
-    # יצירת Scraper שמדמה דפדפן אמיתי
-    scraper = cloudscraper.create_scraper(
-        browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False},
-        delay=10
-    )
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://aoklivestrim.com/"
-    }
-
+    logging.info(f"Fetching data from URL: {URL} using Selenium...")
     try:
-        logging.info("Sending initial request to retrieve cookies...")
-        session = scraper.get(URL, headers=headers, timeout=15)
-        logging.info(f"Initial request status: {session.status_code}")
-
-        if session.status_code != 200:
-            logging.warning(f"Unexpected status code {session.status_code}, possible Cloudflare challenge")
-
-        # אם התגובה נראית כמו HTML, זה אומר שהחסימה עדיין קיימת
-        if "<html" in session.text.lower():
-            logging.error("Cloudflare challenge detected, trying again after delay...")
-            time.sleep(10)  # המתנה כדי לדמות משתמש אמיתי
-            session = scraper.get(URL, headers=headers, timeout=15)
-
-        cookies = session.cookies.get_dict()
-        logging.info(f"Retrieved cookies: {cookies}")
-
-        logging.info("Sending request with cookies...")
-        response = scraper.get(URL, headers=headers, cookies=cookies, timeout=15)
-        logging.info(f"Final response status: {response.status_code}")
-
-        # אם שוב התגובה היא HTML, זה אומר שעדיין יש בעיית חסימה
-        if "<html" in response.text.lower():
-            logging.error("Cloudflare is still blocking the request. Consider using Puppeteer or another bypass method.")
-            return "Cloudflare is still blocking the request", 403
-
-        return response.text, response.status_code
+        data = get_data_using_selenium()
+        return data, 200
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")
         return str(e), 500
